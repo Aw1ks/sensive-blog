@@ -1,15 +1,24 @@
 from django.db import models
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.db.models import Count
 
 
 class PostQuerySet(models.QuerySet):
 
-    def year(self, year):
-        posts_at_year = self.filter(published_at__year=year).order_by('published_at')
-        return posts_at_year
+    def popular(self):
+        most_popular_posts = self.annotate(likes_count=models.Count('likes'))\
+            .order_by('-likes_count')
+        return most_popular_posts
 
+    def fetch_with_comments_count(self):
+        posts_with_comments = Post.objects.filter(id__in=self)\
+            .annotate(comments_count=Count('comments'))
+        post_ids_and_comments = dict(posts_with_comments.values_list('id', 'comments_count'))
 
+        for post in self:
+            post.comments_count = post_ids_and_comments[post.id]
+        return self
 
 
 class Post(models.Model):
@@ -54,6 +63,16 @@ class TagQuerySet(models.QuerySet):
         most_popular_tags = self.annotate(posts_count=models.Count('posts'))\
             .order_by('-posts_count')
         return most_popular_tags
+    
+    def fetch_with_posts_count(self):
+        ids = [tag.id for tag in self]
+        tags_with_posts = Tag.objects.filter(id__in=ids).\
+            annotate(posts_count=Count('posts'))
+        count_for_id = dict(
+            ids_and_posts = tags_with_posts.values_list('id', 'posts_count'))
+        for tag in self:
+            tag.posts_count = count_for_id[tag.id]
+        return self
 
 
 class Tag(models.Model):
