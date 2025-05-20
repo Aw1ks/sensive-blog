@@ -6,7 +6,7 @@ from django.db.models import Count, Prefetch
 
 class PostQuerySet(models.QuerySet):
     def popular(self):
-        most_popular_posts = self.annotate(likes_count=models.Count('likes'))\
+        most_popular_posts = self.annotate(likes_count=models.Count('likes')) \
             .order_by('-likes_count')
         return most_popular_posts
 
@@ -38,7 +38,9 @@ class Post(models.Model):
         User,
         on_delete=models.CASCADE,
         verbose_name='Автор',
-        limit_choices_to={'is_staff': True})
+        limit_choices_to={'is_staff': True},
+        related_name='posts'  
+    )
     likes = models.ManyToManyField(
         User,
         related_name='liked_posts',
@@ -65,10 +67,10 @@ class Post(models.Model):
 
 class TagQuerySet(models.QuerySet):
     def popular(self):
-        most_popular_tags = self.annotate(posts_count=models.Count('posts'))\
+        most_popular_tags = self.annotate(posts_count=models.Count('posts')) \
             .order_by('-posts_count')
         return most_popular_tags
-    
+
     def fetch_with_posts_count(self):
         tags_with_posts = Tag.objects.filter(id__in=self) \
             .annotate(posts_count=Count('posts'))
@@ -108,7 +110,9 @@ class Comment(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        verbose_name='Автор')
+        verbose_name='Автор',
+        related_name='comments'  
+    )
 
     text = models.TextField('Текст комментария')
     published_at = models.DateTimeField('Дата и время публикации')
